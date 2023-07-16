@@ -31,6 +31,7 @@ def send_request(sock, server_address, filename, mode, is_write):
     request_message = pack(format, opcode, bytes(filename, 'utf-8'), 0, bytes(mode, 'utf-8'), 0)
     sock.sendto(request_message, server_address)
 
+
 def send_ack(sock, server_address, seq_num):
     format = f'>hh'
     ack_message = pack(format, OPCODE['ACK'], seq_num)
@@ -48,7 +49,6 @@ def main():
     server_ip = input("Enter the server IP address: ")
 
     while True:
-            
         # Create a UDP socket
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         server_address = (server_ip, DEFAULT_PORT)
@@ -62,14 +62,11 @@ def main():
 
         if operation == "get":
             filename = input("Enter the filename you want to download from the server: ")
-            print("Enter a period \".\" to save to the same directory as client.py \n", end='')
-            file_directory = input("Enter the directory to save the file to: ")
 
-            # Ensure directory path ends with a backslash
-            file_directory = file_directory.rstrip("\\") + "\\"
-
-            # Create the file path
-            file_path = os.path.join(os.path.abspath(file_directory), filename)
+            # Create the file path in the "downloads" folder
+            file_directory = os.path.join(os.path.dirname(__file__), "downloads")
+            os.makedirs(file_directory, exist_ok=True)
+            file_path = os.path.join(file_directory, filename)
 
             # Send RRQ message
             mode = input("Enter transfer mode to be used ('netascii' or 'octet'): ")
@@ -99,7 +96,7 @@ def main():
             except FileNotFoundError:
                 print("Error: No such file or directory.")
                 continue
-            
+
             seq_number = 1
 
             print(f"Uploading {filename} to the server...")
@@ -111,7 +108,7 @@ def main():
                     data, server = sock.recvfrom(516)
                     opcode = int.from_bytes(data[:2], 'big')
                 except sock.timeout:
-                    print('Server is not responding! PLease make sure the server is running and reachable.')
+                    print('Server is not responding! Please make sure the server is running and reachable.')
                     break
 
                 if opcode == OPCODE['DATA']:
