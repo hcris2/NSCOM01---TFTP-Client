@@ -42,7 +42,6 @@ def sendRequest(sock, server_address, filename, mode, is_write):
 
 
 def sendAck(sock, server_address, seq_num):
-
     ack_message = bytearray()
     ack_message.append(0)
     ack_message.append(OPCODE['ACK'])
@@ -53,9 +52,7 @@ def sendAck(sock, server_address, seq_num):
 
 
 def sendData(sock, server_address, block_num, data):
-
     data_message = bytearray()
-
     data_message.append(0)
     data_message.append(OPCODE['DATA'])
     data_message.append(0)
@@ -67,7 +64,7 @@ def sendData(sock, server_address, block_num, data):
 
 def main():
     print("Welcome to the TFTP Client!")
-    
+
     try:
         server_ip = input("Enter the server IP address: ")
         while True:
@@ -128,14 +125,17 @@ def main():
 
                 print(f"Uploading {filename} to the server...")
 
+            last_acknowledged_block = -1
+
             try:
                 while True:
                     data, server = sock.recvfrom(516)
                     opcode = int.from_bytes(data[:2], 'big')
-                    # Receive the data
 
                     if opcode == OPCODE['DATA']:
                         seq_number = int.from_bytes(data[2:4], 'big')
+                        if seq_number == last_acknowledged_block:
+                            continue  # Ignore duplicate ACK
                         sendAck(sock, server, seq_number)
                         file_block = data[4:]
                         file.write(file_block)
@@ -145,6 +145,9 @@ def main():
 
                     elif opcode == OPCODE['ACK']:
                         seq_number = int.from_bytes(data[2:4], 'big')
+                        if seq_number == last_acknowledged_block:
+                            continue  # Ignore duplicate ACK
+                        last_acknowledged_block = seq_number
                         file_block = file.read(BLOCK_SIZE)
 
                         if len(file_block) == 0:
@@ -171,9 +174,9 @@ def main():
 
             if completed:
                 print(f"\n{operation.capitalize()} completed successfully.\n")
-    
+
     except socket.gaierror:
-            print("Invalid server IP address. Please try again.")
+        print("Invalid server IP address. Please try again.")
 
     sock.close()
 
