@@ -24,21 +24,30 @@ ERROR_CODE = {
     7: "No such user."
 }
 
-
-def send_request(sock, server_address, filename, mode, is_write):
+def sendRequest(sock, server_address, filename, mode, is_write):
     opcode = OPCODE['WRQ'] if is_write else OPCODE['RRQ']
-    format_str = f'>h{len(filename)}sB{len(mode)}sB'
-    request_message = pack(format_str, opcode, bytes(filename, 'utf-8'), 0, bytes(mode, 'utf-8'), 0)
+
+    filename_bytes = bytearray(filename.encode('utf-8'))
+    mode_bytes = bytearray(mode.encode('utf-8'))
+
+    request_message = bytearray()
+    request_message.append((opcode >> 8) & 0xFF)
+    request_message.append(opcode & 0xFF)
+    request_message += filename_bytes
+    request_message.append(0)
+    request_message += mode_bytes
+    request_message.append(0)
+
     sock.sendto(request_message, server_address)
 
 
-def send_ack(sock, server_address, seq_num):
+def sendAck(sock, server_address, seq_num):
     format_str = f'>hh'
     ack_message = pack(format_str, OPCODE['ACK'], seq_num)
     sock.sendto(ack_message, server_address)
 
 
-def send_data(sock, server_address, block_num, data):
+def sendData(sock, server_address, block_num, data):
     format_str = f'>hh{len(data)}s'
     data_message = pack(format_str, OPCODE['DATA'], block_num, data)
     sock.sendto(data_message, server_address)
@@ -46,10 +55,11 @@ def send_data(sock, server_address, block_num, data):
 
 def main():
     print("Welcome to the TFTP Client!")
-    while True:
-        # Get server IP address from the user
-        server_ip = input("Enter the server IP address: ")
+    
 
+    while True:
+        
+        server_ip = input("Enter the server IP address: ")
         try:
             # Create a UDP socket
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -57,102 +67,98 @@ def main():
 
             sock.settimeout(5)
 
-            while True:
-                # Get user input
-                operation = input("\nEnter the operation (get/put), or enter 'exit' to quit: ")
+            # Get user input
+            operation = input("Enter the operation (get/put), or enter 'exit' to quit: ")
+            if operation == 'exit':
+                break
 
-                if operation == 'exit':
-                    break
-                elif operation not in ['get', 'put']:
-                    print("Invalid operation. Please enter 'get', 'put', or 'exit'.")
-                    continue
+            completed = False  # Mark operation completion
 
-                completed = False  # Mark operation completion
+            if operation == "get":
+                filename = input("Enter the filename you want to download from the server: ")
 
-                if operation == "get":
-                    filename = input("Enter the filename you want to download from the server: ")
+                # Create the file path in the "downloads" folder
+                file_directory = os.path.join(os.path.dirname(__file__), "downloads")
+                os.makedirs(file_directory, exist_ok=True)
+                file_path = os.path.join(file_directory, filename)
 
-                    # Create the file path in the "downloads" folder
-                    file_directory = os.path.join(os.path.dirname(__file__), "downloads")
-                    os.makedirs(file_directory, exist_ok=True)
-                    file_path = os.path.join(file_directory, filename)
-
-                    # Send RRQ message
-                    mode = input("Enter transfer mode to be used ('netascii' or 'octet'): ")
-                    file_name = os.path.basename(file_path)
-
-                    try:
-                        send_request(sock, server_address, file_name, mode, is_write=False)
-                        file = open(file_path, "wb")
-                        completed = True  # File upload completed successfully
-                    except FileNotFoundError:
-                        print("\nError: No such file or directory.")
-                        continue
-                    seq_number = 0
-
-                    print(f"Downloading {filename} from the server...")
-
-                elif operation == "put":
-                    print("Enter just the filename if the file is located in the same folder as your client. \n", end='')
-                    filename = input("Enter the directory of the file you want to upload to the server: ")
-                    server_filename = input("Enter the filename to be used on the server: ")
-
-                    # Send WRQ message
-                    mode = input("Enter transfer mode to be used ('netascii' or 'octet'): ")
-                    server_filename = os.path.basename(server_filename)
-
-                    try:
-                        send_request(sock, server_address, server_filename, mode, is_write=True)
-                        file = open(filename, "rb")
-                        completed = True  # File upload completed successfully
-                    except FileNotFoundError:
-                        print("Error: No such file or directory.")
-                        continue
-
-                    seq_number = 1
-
-                    print(f"Uploading {filename} to the server...")
+                # Send RRQ message
+                mode = input("Enter transfer mode to be used ('netascii' or 'octet'): ")
+                file_name = os.path.basename(file_path)
 
                 try:
-                    while True:
-                        # Receive data from the server
-                        data, server = sock.recvfrom(516)
-                        opcode = int.from_bytes(data[:2], 'big')
+                    sendRequest(sock, server_address, file_name, mode, is_write=False)
+                    file = open(file_path, "wb")
+                    completed = True  # File upload completed successfully
+                except FileNotFoundError:
+                    print("\nError: No such file or directory.")
+                    continue
+                seq_number = 0
 
-                        if opcode == OPCODE['DATA']:
-                            seq_number = int.from_bytes(data[2:4], 'big')
-                            send_ack(sock, server, seq_number)
-                            file_block = data[4:]
-                            file.write(file_block)
+                print(f"Downloading {filename} from the server...")
 
-                            if len(file_block) < BLOCK_SIZE:
-                                break
-                        elif opcode == OPCODE['ACK']:
-                            seq_number = int.from_bytes(data[2:4], 'big')
-                            file_block = file.read(BLOCK_SIZE)
+            elif operation == "put":
+                print("Enter just the filename if the file is located in the same folder as your client. \n", end='')
+                filename = input("Enter the directory of the file you want to upload to the server: ")
+                server_filename = input("Enter the filename to be used on the server: ")
 
-                            if len(file_block) == 0:
-                                break
+                # Send WRQ message
+                mode = input("Enter transfer mode to be used ('netascii' or 'octet'): ")
+                server_filename = os.path.basename(server_filename)
 
-                            send_data(sock, server, seq_number + 1, file_block)
-                            if len(file_block) < BLOCK_SIZE:
-                                break
-                        elif opcode == OPCODE['ERROR']:
-                            error_code = int.from_bytes(data[2:4], byteorder='big')
-                            print('ERROR: ' + ERROR_CODE[error_code])
-                            completed = False  # File not found, operation not completed
+                try:
+                    sendRequest(sock, server_address, server_filename, mode, is_write=True)
+                    file = open(filename, "rb")
+                    completed = True  # File upload completed successfully
+                except FileNotFoundError:
+                    print("Error: No such file or directory.")
+                    continue
+
+                seq_number = 1
+
+                print(f"Uploading {filename} to the server...")
+
+            try:
+                while True:
+                    # Receive data from the server
+                    data, server = sock.recvfrom(516)
+                    opcode = int.from_bytes(data[:2], 'big')
+
+                    if opcode == OPCODE['DATA']:
+                        seq_number = int.from_bytes(data[2:4], 'big')
+                        sendAck(sock, server, seq_number)
+                        file_block = data[4:]
+                        file.write(file_block)
+
+                        if len(file_block) < BLOCK_SIZE:
                             break
-                        else:
+                    elif opcode == OPCODE['ACK']:
+                        seq_number = int.from_bytes(data[2:4], 'big')
+                        file_block = file.read(BLOCK_SIZE)
+
+                        if len(file_block) == 0:
                             break
-                except socket.timeout:
-                    completed = False
-                    print("\nFailed to connect to the TFTP server. Please make sure the server is running and reachable.")
-                finally:
-                    file.close()
 
-                if completed:
-                    print(f"\n{operation.capitalize()} completed successfully.")
+                        sendData(sock, server, seq_number + 1, file_block)
+                        if len(file_block) < BLOCK_SIZE:
+                            break
+                    elif opcode == OPCODE['ERROR']:
+                        error_code = int.from_bytes(data[2:4], byteorder='big')
+                        print('ERROR: ' + ERROR_CODE[error_code])
+                        completed = False  # File not found, operation not completed
+                        break
+                    else:
+                        break
+            except socket.timeout:
+                completed = False
+                print("\nFailed to connect to the TFTP server. Please make sure the server is running and reachable.")
+            finally:
+                file.close()
 
+            if completed:
+                print(f"\n{operation.capitalize()} completed successfully.")
+
+            
         except socket.gaierror:
             print("Invalid server IP address. Please try again.")
 
