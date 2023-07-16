@@ -110,7 +110,8 @@ def main():
                     seq_number = int.from_bytes(data[2:4], 'big')
                     send_ack(sock, server, seq_number)
                     file_block = data[4:]
-                    file.write(file_block)
+                    if 'file' in locals():  # Check if file variable exists
+                        file.write(file_block)
 
                     if len(file_block) < BLOCK_SIZE:
                         break
@@ -136,7 +137,8 @@ def main():
         except ConnectionResetError:
             print("\nFailed to connect to the TFTP server. Please make sure the server is running and reachable.")
         finally:
-            file.close()
+            if 'file' in locals():  # Check if file variable exists
+                file.close()
 
         print(f"\n{operation.capitalize()} completed successfully.")
 
