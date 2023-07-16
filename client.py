@@ -42,14 +42,26 @@ def sendRequest(sock, server_address, filename, mode, is_write):
 
 
 def sendAck(sock, server_address, seq_num):
-    format_str = f'>hh'
-    ack_message = pack(format_str, OPCODE['ACK'], seq_num)
+
+    ack_message = bytearray()
+    ack_message.append(0)
+    ack_message.append(OPCODE['ACK'])
+    ack_message.append(0)
+    ack_message.append(seq_num)
+
     sock.sendto(ack_message, server_address)
 
 
 def sendData(sock, server_address, block_num, data):
-    format_str = f'>hh{len(data)}s'
-    data_message = pack(format_str, OPCODE['DATA'], block_num, data)
+
+    data_message = bytearray()
+
+    data_message.append(0)
+    data_message.append(OPCODE['DATA'])
+    data_message.append(0)
+    data_message.append(block_num)
+    data_message += data
+
     sock.sendto(data_message, server_address)
 
 
@@ -118,9 +130,9 @@ def main():
 
             try:
                 while True:
-                    # Receive data from the server
                     data, server = sock.recvfrom(516)
                     opcode = int.from_bytes(data[:2], 'big')
+                    # Receive the data
 
                     if opcode == OPCODE['DATA']:
                         seq_number = int.from_bytes(data[2:4], 'big')
@@ -130,6 +142,7 @@ def main():
 
                         if len(file_block) < BLOCK_SIZE:
                             break
+
                     elif opcode == OPCODE['ACK']:
                         seq_number = int.from_bytes(data[2:4], 'big')
                         file_block = file.read(BLOCK_SIZE)
@@ -140,13 +153,16 @@ def main():
                         sendData(sock, server, seq_number + 1, file_block)
                         if len(file_block) < BLOCK_SIZE:
                             break
+
                     elif opcode == OPCODE['ERROR']:
                         error_code = int.from_bytes(data[2:4], byteorder='big')
                         print('ERROR: ' + ERROR_CODE[error_code])
                         completed = False  # File not found, operation not completed
                         break
+
                     else:
                         break
+
             except socket.timeout:
                 completed = False
                 print("\nFailed to connect to the TFTP server. Please make sure the server is running and reachable.")
@@ -158,11 +174,6 @@ def main():
     
     except socket.gaierror:
             print("Invalid server IP address. Please try again.")
-
-   
-
-            
-        
 
     sock.close()
 
