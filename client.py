@@ -61,6 +61,19 @@ def sendData(sock, server_address, block_num, data):
 
     sock.sendto(data_message, server_address)
 
+def sendError(sock, server_address, error_code, error_message):
+    error_message_bytes = bytearray(error_message.encode('utf-8'))
+
+    error_packet = bytearray()
+    error_packet.append(0)
+    error_packet.append(OPCODE['ERROR'])
+    error_packet.append((error_code >> 8) & 0xFF)
+    error_packet.append(error_code & 0xFF)
+    error_packet += error_message_bytes
+    error_packet.append(0)
+
+    sock.sendto(error_packet, server_address)
+
 
 def main():
     print("Welcome to the TFTP Client!")
@@ -155,6 +168,8 @@ def main():
                                 break
                         elif opcode == OPCODE['ERROR']:
                             error_code = int.from_bytes(data[2:4], byteorder='big')
+                            error_message = data[4:-1].decode('utf-8')
+                            sendError(sock, server, error_code, error_message)  # Call sendError function
                             print('ERROR: ' + ERROR_CODE[error_code])
                             completed = False  # File not found, operation not completed
                             break
