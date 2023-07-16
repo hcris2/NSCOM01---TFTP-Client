@@ -138,8 +138,11 @@ def main():
                             continue  # Ignore duplicate ACK
                         sendAck(sock, server, seq_number)
                         file_block = data[4:]
-                        file.write(file_block)
-
+                        try:
+                            file.write(file_block)
+                        except OSError:
+                            print(ERROR_CODE[3])
+                            
                         if len(file_block) < BLOCK_SIZE:
                             break
 
