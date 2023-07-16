@@ -56,11 +56,9 @@ def sendData(sock, server_address, block_num, data):
 def main():
     print("Welcome to the TFTP Client!")
     
-
-    while True:
-        
+    try:
         server_ip = input("Enter the server IP address: ")
-        try:
+        while True:
             # Create a UDP socket
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             server_address = (server_ip, DEFAULT_PORT)
@@ -91,7 +89,7 @@ def main():
                     file = open(file_path, "wb")
                     completed = True  # File upload completed successfully
                 except FileNotFoundError:
-                    print("\nError: No such file or directory.")
+                    print("\nError: No such file or directory.\n")
                     continue
                 seq_number = 0
 
@@ -111,7 +109,7 @@ def main():
                     file = open(filename, "rb")
                     completed = True  # File upload completed successfully
                 except FileNotFoundError:
-                    print("Error: No such file or directory.")
+                    print("\nError: No such file or directory.\n")
                     continue
 
                 seq_number = 1
@@ -156,11 +154,15 @@ def main():
                 file.close()
 
             if completed:
-                print(f"\n{operation.capitalize()} completed successfully.")
+                print(f"\n{operation.capitalize()} completed successfully.\n")
+    
+    except socket.gaierror:
+            print("Invalid server IP address. Please try again.")
+
+   
 
             
-        except socket.gaierror:
-            print("Invalid server IP address. Please try again.")
+        
 
     sock.close()
 
