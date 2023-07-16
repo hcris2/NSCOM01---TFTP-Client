@@ -72,7 +72,6 @@ def main():
             mode = input("Enter transfer mode to be used ('netascii' or 'octet'): ")
             file_name = os.path.basename(file_path)
             send_request(sock, server_address, file_name, mode, is_write=False)
-            
             try:
                 file = open(file_path, "wb")
             except FileNotFoundError:
@@ -129,7 +128,6 @@ def main():
 
                     send_data(sock, server, seq_number + 1, file_block)
                     if len(file_block) < BLOCK_SIZE:
-                        print(f"\n{operation.capitalize()} completed successfully.")
                         break
                 elif opcode == OPCODE['ERROR']:
                     error_code = int.from_bytes(data[2:4], byteorder='big')
@@ -142,6 +140,7 @@ def main():
         finally:
             file.close()
 
+        print(f"\n{operation.capitalize()} completed successfully.")
 
     sock.close()
 
