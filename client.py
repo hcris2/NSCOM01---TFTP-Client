@@ -73,11 +73,6 @@ def main():
             file_name = os.path.basename(file_path)
             send_request(sock, server_address, file_name, mode, is_write=False)
             
-            if not os.path.exists(file_path):
-                print('ERROR: ' + ERROR_CODE[1])
-                print(f"Could not find file: '{filename}'")
-                continue
-
             try:
                 file = open(file_path, "wb")
             except FileNotFoundError:
@@ -96,12 +91,6 @@ def main():
             mode = input("Enter transfer mode to be used ('netascii' or 'octet'): ")
             server_filename = os.path.basename(server_filename)
             send_request(sock, server_address, server_filename, mode, is_write=True)
-
-            if not os.path.exists(file_path):
-                print('ERROR: ' + ERROR_CODE[1])
-                print(f"Could not find file: '{filename}'")
-                continue
-
 
             try:
                 file = open(filename, "rb")
