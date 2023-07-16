@@ -25,17 +25,11 @@ ERROR_CODE = {
 }
 
 
-def send_wrq(sock, server_address, filename, mode):
+def send_request(sock, server_address, filename, mode, is_write):
+    opcode = OPCODE['WRQ'] if is_write else OPCODE['RRQ']
     format = f'>h{len(filename)}sB{len(mode)}sB'
-    wrq_message = pack(format, OPCODE['WRQ'], bytes(filename, 'utf-8'), 0, bytes(mode, 'utf-8'), 0)
-    sock.sendto(wrq_message, server_address)
-
-
-def send_rrq(sock, server_address, filename, mode):
-    format = f'>h{len(filename)}sB{len(mode)}sB'
-    rrq_message = pack(format, OPCODE['RRQ'], bytes(filename, 'utf-8'), 0, bytes(mode, 'utf-8'), 0)
-    sock.sendto(rrq_message, server_address)
-
+    request_message = pack(format, opcode, bytes(filename, 'utf-8'), 0, bytes(mode, 'utf-8'), 0)
+    sock.sendto(request_message, server_address)
 
 def send_ack(sock, server_address, seq_num):
     format = f'>hh'
@@ -53,13 +47,14 @@ def main():
     print("Welcome to the TFTP Client!")
     server_ip = input("Enter the server IP address: ")
 
-    # Create a UDP socket
-    server_address = (server_ip, DEFAULT_PORT)
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-    sock.settimeout(5)
-
     while True:
+            
+        # Create a UDP socket
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        server_address = (server_ip, DEFAULT_PORT)
+
+        sock.settimeout(5)
+
         # Get user input
         operation = input("\nEnter the operation (get/put), or enter 'exit' to quit: ")
         if operation == 'exit':
@@ -79,7 +74,7 @@ def main():
             # Send RRQ message
             mode = input("Enter transfer mode to be used ('netascii' or 'octet'): ")
             file_name = os.path.basename(file_path)
-            send_rrq(sock, server_address, file_name, mode)
+            send_request(sock, server_address, file_name, mode, is_write=False)
             try:
                 file = open(file_path, "wb")
             except FileNotFoundError:
@@ -97,7 +92,7 @@ def main():
             # Send WRQ message
             mode = input("Enter transfer mode to be used ('netascii' or 'octet'): ")
             server_filename = os.path.basename(server_filename)
-            send_wrq(sock, server_address, server_filename, mode)
+            send_request(sock, server_address, server_filename, mode, is_write=True)
 
             try:
                 file = open(filename, "rb")
