@@ -47,14 +47,13 @@ def main():
     print("Welcome to the TFTP Client!")
     server_ip = input("Enter the server IP address: ")
 
+    # Create a UDP socket
+    server_address = (server_ip, DEFAULT_PORT)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    sock.settimeout(5)
+
     while True:
-            
-        # Create a UDP socket
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        server_address = (server_ip, DEFAULT_PORT)
-
-        sock.settimeout(5)
-
         # Get user input
         operation = input("\nEnter the operation (get/put), or enter 'exit' to quit: ")
         if operation == 'exit':
