@@ -143,9 +143,15 @@ def main():
                     print(f"Uploading {filename} to the server...")
 
                 try:
-                    while True:
+                   while True:
                         # Receive data from the server
-                        data, server = sock.recvfrom(516)
+                        try:
+                            data, server = sock.recvfrom(516)
+                        except:
+                            print("\nFailed to receive data from the TFTP server. Please make sure the server is running and reachable.")
+                            completed = False
+                            break
+
                         opcode = int.from_bytes(data[:2], 'big')
 
                         if opcode == OPCODE['DATA']:
